@@ -4,13 +4,7 @@ import { useEffect, useState } from "react";
 import { TaskBoard } from "@/components/TaskBoard";
 import { MemoryLog } from "@/components/MemoryLog";
 import { StatusBar } from "@/components/StatusBar";
-
-interface Task {
-  id: string;
-  title: string;
-  status: "todo" | "done";
-  project: string;
-}
+import { Task } from "@/lib/types";
 
 interface MemoryEntry {
   date: string;
@@ -22,33 +16,21 @@ interface MemoryEntry {
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/tasks").then((r) => r.json()),
-      fetch("/api/memory").then((r) => r.json()),
-    ])
-      .then(([taskData, memData]) => {
-        setTasks(taskData.tasks || []);
-        setMemories(memData.memories || []);
-      })
-      .finally(() => setLoading(false));
+    fetch("/api/tasks")
+      .then((r) => r.json())
+      .then((data) => setTasks(data.tasks || []));
   }, []);
 
-  const todoTasks = tasks.filter((t) => t.status === "todo");
-  const doneTasks = tasks.filter((t) => t.status === "done");
-  const projects = [...new Set(tasks.map((t) => t.project))];
+  useEffect(() => {
+    fetch("/api/memory")
+      .then((r) => r.json())
+      .then((data) => setMemories(data.memories || []));
+  }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
-        <div className="animate-pulse text-lg text-gray-400">
-          Loading Mission Control...
-        </div>
-      </div>
-    );
-  }
+  const todoCount = tasks.filter((t) => t.status === "todo").length;
+  const projects = [...new Set(tasks.map((t) => t.project).filter(Boolean))];
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -61,7 +43,7 @@ export default function Home() {
           </div>
           <StatusBar
             taskCount={tasks.length}
-            todoCount={todoTasks.length}
+            todoCount={todoCount}
             projectCount={projects.length}
           />
         </div>
@@ -69,11 +51,7 @@ export default function Home() {
 
       <main className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <TaskBoard
-            todoTasks={todoTasks}
-            doneTasks={doneTasks}
-            projects={projects}
-          />
+          <TaskBoard />
         </div>
         <div>
           <MemoryLog memories={memories} />

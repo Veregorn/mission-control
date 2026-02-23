@@ -1,12 +1,65 @@
 import fs from "fs";
 import path from "path";
+import { Task, TaskStatus, TaskPriority, TaskAssignee } from "./types";
 
-export interface Task {
-  id: string;
-  title: string;
-  status: "todo" | "done";
-  project: string;
-  priority?: string;
+export type { Task };
+
+const MC_TASKS_FILE = "Mission Control Tasks.md";
+
+function stableId(filePath: string, lineNumber: number): string {
+  return Buffer.from(`${filePath}:${lineNumber}`).toString("base64url").slice(0, 12);
+}
+
+/**
+ * Parse checkboxes from an Obsidian markdown file
+ */
+export function parseTasksFromMarkdown(filepath: string, projectName: string): Task[] {
+  const content = fs.readFileSync(filepath, "utf-8");
+  const tasks: Task[] = [];
+  const lines = content.split("\n");
+  const isEditable = path.basename(filepath) === MC_TASKS_FILE;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    let status: TaskStatus | null = null;
+
+    if (/^- \[ \]/.test(line)) status = "todo";
+    else if (/^- \[\/\]/.test(line)) status = "in_progress";
+    else if (/^- \[x\]/i.test(line)) status = "done";
+
+    if (status === null) continue;
+
+    // Extract title (text after checkbox marker, strip mc comment)
+    const rawTitle = line
+      .replace(/^- \[[ /x]\]\s*/i, "")
+      .replace(/<!--.*?-->/g, "")
+      .replace(/#\w+/g, "")
+      .trim();
+
+    if (!rawTitle) continue;
+
+    // Parse mc metadata comment
+    const mcMatch = line.match(/<!--\s*mc:id=(\S+)\s+priority=(\S+)\s+assignee=(\S+)(?:\s+project=(\S+))?\s*-->/);
+
+    const id = mcMatch ? mcMatch[1] : stableId(filepath, i + 1);
+    const priority = (mcMatch ? mcMatch[2] : "medium") as TaskPriority;
+    const assignee = (mcMatch ? mcMatch[3] : "raul") as TaskAssignee;
+    const project = mcMatch ? mcMatch[4] : projectName;
+
+    tasks.push({
+      id,
+      title: rawTitle,
+      status,
+      priority,
+      assignee,
+      project,
+      filePath: filepath,
+      lineNumber: i + 1,
+      editable: isEditable,
+    });
+  }
+
+  return tasks;
 }
 
 export interface CronJob {
@@ -21,41 +74,6 @@ export interface MemoryEntry {
   filename: string;
   excerpt: string;
   sizeBytes: number;
-}
-
-/**
- * Parse checkboxes from an Obsidian markdown file
- */
-export function parseTasksFromMarkdown(
-  filepath: string,
-  projectName: string
-): Task[] {
-  const content = fs.readFileSync(filepath, "utf-8");
-  const tasks: Task[] = [];
-  const lines = content.split("\n");
-
-  for (const line of lines) {
-    const todoMatch = line.match(/^- \[ \] (.+)/);
-    const doneMatch = line.match(/^- \[x\] (.+)/i);
-
-    if (todoMatch) {
-      tasks.push({
-        id: `${projectName}-${tasks.length}`,
-        title: todoMatch[1].replace(/#\w+/g, "").trim(),
-        status: "todo",
-        project: projectName,
-      });
-    } else if (doneMatch) {
-      tasks.push({
-        id: `${projectName}-${tasks.length}`,
-        title: doneMatch[1].replace(/#\w+/g, "").trim(),
-        status: "done",
-        project: projectName,
-      });
-    }
-  }
-
-  return tasks;
 }
 
 /**
