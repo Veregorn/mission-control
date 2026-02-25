@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
-import path from "path";
 import { PATHS } from "@/lib/config";
 import { TaskStatus } from "@/lib/types";
 
-const MC_TASKS_PATH = path.join(PATHS.obsidianProjects, "Mission Control Tasks.md");
+const MC_TASKS_PATH = PATHS.taskInbox;
 
 function statusToCheckbox(status: TaskStatus): string {
   if (status === "todo") return "[ ]";
@@ -13,7 +12,10 @@ function statusToCheckbox(status: TaskStatus): string {
 }
 
 function findLineIndex(lines: string[], id: string): number {
-  return lines.findIndex((l) => l.includes(`mc:id=${id}`));
+  // Support both Obsidian comments (%% ... %%) and legacy HTML comments
+  return lines.findIndex(
+    (l) => l.includes(`%% mc:id=${id}`) || l.includes(`<!-- mc:id=${id}`)
+  );
 }
 
 export async function PATCH(

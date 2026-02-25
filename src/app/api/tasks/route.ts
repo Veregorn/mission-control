@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     const resolvedPriority = priority ?? "medium";
     const resolvedAssignee = assignee ?? "raul";
     const projectPart = project ? ` project=${project}` : "";
-    const line = `- [ ] ${title} #${resolvedPriority} #${resolvedAssignee} <!-- mc:id=${id} priority=${resolvedPriority} assignee=${resolvedAssignee}${projectPart} -->`;
+    const line = `- [ ] ${title} #${resolvedPriority} #${resolvedAssignee} %% mc:id=${id} priority=${resolvedPriority} assignee=${resolvedAssignee}${projectPart} %%`;
 
     const current = fs.readFileSync(MC_TASKS_PATH, "utf-8");
 
