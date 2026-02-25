@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TaskBoard } from "@/components/TaskBoard";
+import { CronPanel } from "@/components/CronPanel";
 import { MemoryLog } from "@/components/MemoryLog";
 import { StatusBar } from "@/components/StatusBar";
 import { Task } from "@/lib/types";
@@ -13,9 +14,18 @@ interface MemoryEntry {
   sizeBytes: number;
 }
 
+type Tab = "tasks" | "crons" | "memory";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "tasks", label: "📋 Tasks" },
+  { id: "crons", label: "⏰ Crons" },
+  { id: "memory", label: "📚 Memory" },
+];
+
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>("tasks");
 
   useEffect(() => {
     fetch("/api/tasks")
@@ -49,13 +59,28 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <TaskBoard />
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex gap-1 border-b border-gray-800 mt-4">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                activeTab === tab.id
+                  ? "border-blue-500 text-white"
+                  : "border-transparent text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-        <div>
-          <MemoryLog memories={memories} />
-        </div>
+      </div>
+
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        {activeTab === "tasks" && <TaskBoard />}
+        {activeTab === "crons" && <CronPanel />}
+        {activeTab === "memory" && <MemoryLog memories={memories} />}
       </main>
     </div>
   );

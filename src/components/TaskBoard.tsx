@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from "@hello-pangea/dnd";
 import { Task, TaskPriority, TaskAssignee, TaskStatus } from "@/lib/types";
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
@@ -34,11 +40,17 @@ function useTasks() {
     refreshTasks();
   }, [refreshTasks]);
 
-  return { tasks, loading, refreshTasks };
+  return { tasks, setTasks, loading, refreshTasks };
 }
 
+const columns: { status: TaskStatus; label: string; color: string; dot: string }[] = [
+  { status: "todo", label: "Pendiente", color: "text-amber-400", dot: "bg-amber-400" },
+  { status: "in_progress", label: "En progreso", color: "text-blue-400", dot: "bg-blue-400" },
+  { status: "done", label: "Completado", color: "text-green-400", dot: "bg-green-400" },
+];
+
 export function TaskBoard() {
-  const { tasks, loading, refreshTasks } = useTasks();
+  const { tasks, setTasks, loading, refreshTasks } = useTasks();
 
   const [filter, setFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
@@ -91,11 +103,25 @@ export function TaskBoard() {
     await refreshTasks();
   };
 
-  const columns: { status: TaskStatus; label: string; color: string; dot: string }[] = [
-    { status: "todo", label: "Pendiente", color: "text-amber-400", dot: "bg-amber-400" },
-    { status: "in_progress", label: "En progreso", color: "text-blue-400", dot: "bg-blue-400" },
-    { status: "done", label: "Completado", color: "text-green-400", dot: "bg-green-400" },
-  ];
+  const handleDragEnd = async (result: DropResult) => {
+    const { draggableId, destination } = result;
+    if (!destination) return;
+
+    const newStatus = destination.droppableId as TaskStatus;
+    const task = tasks.find((t) => t.id === draggableId);
+    if (!task || task.status === newStatus) return;
+
+    // Optimistic update
+    setTasks((prev) =>
+      prev.map((t) => (t.id === draggableId ? { ...t, status: newStatus } : t))
+    );
+
+    await fetch(`/api/tasks/${draggableId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+  };
 
   return (
     <div>
@@ -185,32 +211,55 @@ export function TaskBoard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {columns.map(({ status, label, color, dot }) => {
-          const colTasks = filtered(status);
-          return (
-            <div key={status} className="bg-gray-900 rounded-lg p-4 border border-gray-800">
-              <h3 className={`text-sm font-medium ${color} mb-3 flex items-center gap-2`}>
-                <span className={`w-2 h-2 rounded-full ${dot}`} />
-                {label} ({colTasks.length})
-              </h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {colTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onStatusChange={handleStatusChange}
-                    onDelete={handleDelete}
-                  />
-                ))}
-                {colTasks.length === 0 && (
-                  <p className="text-gray-600 text-sm">Sin tareas</p>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {columns.map(({ status, label, color, dot }) => {
+            const colTasks = filtered(status);
+            return (
+              <Droppable droppableId={status} key={status}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`bg-gray-900 rounded-lg p-4 border transition-colors ${
+                      snapshot.isDraggingOver ? "border-gray-600 bg-gray-800/50" : "border-gray-800"
+                    }`}
+                  >
+                    <h3 className={`text-sm font-medium ${color} mb-3 flex items-center gap-2`}>
+                      <span className={`w-2 h-2 rounded-full ${dot}`} />
+                      {label} ({colTasks.length})
+                    </h3>
+                    <div className="space-y-2 min-h-[2rem]">
+                      {colTasks.map((task, index) => (
+                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={snapshot.isDragging ? "opacity-80 rotate-1" : ""}
+                            >
+                              <TaskCard
+                                task={task}
+                                onStatusChange={handleStatusChange}
+                                onDelete={handleDelete}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      {colTasks.length === 0 && (
+                        <p className="text-gray-600 text-sm">Sin tareas</p>
+                      )}
+                    </div>
+                  </div>
                 )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              </Droppable>
+            );
+          })}
+        </div>
+      </DragDropContext>
     </div>
   );
 }
@@ -231,7 +280,7 @@ function TaskCard({
   };
 
   return (
-    <div className="bg-gray-800/50 rounded px-3 py-2 text-sm group relative">
+    <div className="bg-gray-800/50 rounded px-3 py-2 text-sm group relative cursor-grab active:cursor-grabbing">
       <div className="flex items-start justify-between gap-1">
         <div className="flex-1">
           <div className="text-gray-200">{task.title}</div>
