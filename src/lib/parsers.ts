@@ -4,7 +4,7 @@ import { Task, TaskStatus, TaskPriority, TaskAssignee } from "./types";
 
 export type { Task };
 
-const MC_TASKS_FILE = "Mission Control Tasks.md";
+const EDITABLE_FILES = ["Task Inbox.md", "Mission Control Tasks.md"];
 
 function stableId(filePath: string, lineNumber: number): string {
   return Buffer.from(`${filePath}:${lineNumber}`).toString("base64url").slice(0, 12);
@@ -17,7 +17,7 @@ export function parseTasksFromMarkdown(filepath: string, projectName: string): T
   const content = fs.readFileSync(filepath, "utf-8");
   const tasks: Task[] = [];
   const lines = content.split("\n");
-  const isEditable = path.basename(filepath) === MC_TASKS_FILE;
+  const isEditable = EDITABLE_FILES.includes(path.basename(filepath));
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];

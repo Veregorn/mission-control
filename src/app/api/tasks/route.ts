@@ -15,15 +15,13 @@ export async function GET() {
   try {
     const files = fs.readdirSync(projectsDir).filter((f) => f.endsWith(".md"));
 
+    // Always include Task Inbox
+    if (fs.existsSync(PATHS.taskInbox)) {
+      allTasks.push(...parseTasksFromMarkdown(PATHS.taskInbox, "Inbox"));
+    }
+
     for (const file of files) {
       const filepath = path.join(projectsDir, file);
-
-      // Mission Control Tasks.md: always include
-      if (file === "Mission Control Tasks.md") {
-        allTasks.push(...parseTasksFromMarkdown(filepath, "Mission Control"));
-        continue;
-      }
-
       const content = fs.readFileSync(filepath, "utf-8");
       if (!content.includes("serman")) continue;
       if (content.includes("#completado") || content.includes("#pausado")) continue;
@@ -56,13 +54,34 @@ export async function POST(request: Request) {
     }
 
     const id = crypto.randomUUID().slice(0, 8);
+    const resolvedPriority = priority ?? "medium";
+    const resolvedAssignee = assignee ?? "raul";
     const projectPart = project ? ` project=${project}` : "";
-    const line = `- [ ] ${title} <!-- mc:id=${id} priority=${priority ?? "medium"} assignee=${assignee ?? "raul"}${projectPart} -->`;
+    const line = `- [ ] ${title} #${resolvedPriority} #${resolvedAssignee} <!-- mc:id=${id} priority=${resolvedPriority} assignee=${resolvedAssignee}${projectPart} -->`;
 
     const current = fs.readFileSync(MC_TASKS_PATH, "utf-8");
-    const updated = current.endsWith("\n")
-      ? current + line + "\n"
-      : current + "\n" + line + "\n";
+
+    // Insert under "## 📥 Sin clasificar" section if present
+    const sectionMarker = "## 📥 Sin clasificar";
+    let updated: string;
+    if (current.includes(sectionMarker)) {
+      // Find the section and insert after it (replacing placeholder if empty)
+      updated = current
+        .replace(/(## 📥 Sin clasificar\n+)\(vacío\)/, `$1${line}`)
+        .replace(/(## 📥 Sin clasificar\n)(?!\()/, `$1${line}\n`);
+      // If neither replacement matched (section exists but not in expected format), append after section header
+      if (!updated.includes(line)) {
+        updated = current.replace(
+          /(## 📥 Sin clasificar\n)/,
+          `$1${line}\n`
+        );
+      }
+    } else {
+      updated = current.endsWith("\n")
+        ? current + line + "\n"
+        : current + "\n" + line + "\n";
+    }
+
     fs.writeFileSync(MC_TASKS_PATH, updated, "utf-8");
 
     const lineNumber = updated.split("\n").findIndex((l) => l.includes(`mc:id=${id}`)) + 1;
