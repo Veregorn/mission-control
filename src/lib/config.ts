@@ -9,6 +9,8 @@ export const PATHS = {
     : "/Users/rjbarco/clawd/memory/project-logs",
   obsidianProjects:
     "/Users/rjbarco/Documents/obsidian-vault/Veregorn/01 Proyectos",
+  taskInbox:
+    "/Users/rjbarco/Documents/obsidian-vault/Veregorn/Task Inbox.md",
   priorities: process.env.CLAWD_DIR
     ? `${process.env.CLAWD_DIR}/PRIORITIES.md`
     : "/Users/rjbarco/clawd/PRIORITIES.md",

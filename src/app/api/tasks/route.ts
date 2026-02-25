@@ -6,7 +6,7 @@ import { PATHS } from "@/lib/config";
 import { parseTasksFromMarkdown } from "@/lib/parsers";
 import { Task, TaskPriority, TaskAssignee } from "@/lib/types";
 
-const MC_TASKS_PATH = path.join(PATHS.obsidianProjects, "Mission Control Tasks.md");
+const MC_TASKS_PATH = PATHS.taskInbox;
 
 export async function GET() {
   const projectsDir = PATHS.obsidianProjects;
