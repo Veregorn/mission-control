@@ -29,7 +29,7 @@ export function parseTasksFromMarkdown(filepath: string, projectName: string): T
 
     if (status === null) continue;
 
-    // Extract title (text after checkbox marker, strip Obsidian comments and tags)
+    // Extract title (strip checkbox, tags, and any legacy comments)
     const rawTitle = line
       .replace(/^- \[[ /x]\]\s*/i, "")
       .replace(/%%.*?%%/g, "")
@@ -39,19 +39,15 @@ export function parseTasksFromMarkdown(filepath: string, projectName: string): T
 
     if (!rawTitle) continue;
 
-    // Parse mc metadata from Obsidian comment (%% ... %%)
-    const mcMatch =
-      line.match(/%%\s*mc:id=(\S+)\s+priority=(\S+)\s+assignee=(\S+)(?:\s+project=(\S+))?\s*%%/) ||
-      line.match(/<!--\s*mc:id=(\S+)\s+priority=(\S+)\s+assignee=(\S+)(?:\s+project=(\S+))?\s*-->/);
-
-    // Fallback: parse priority/assignee from Obsidian tags
+    // Parse priority/assignee from Obsidian tags
     const tagPriority = line.match(/#(high|medium|low)\b/)?.[1] as TaskPriority | undefined;
     const tagAssignee = line.match(/#(raul|serman)\b/)?.[1] as TaskAssignee | undefined;
 
-    const id = mcMatch ? mcMatch[1] : stableId(filepath, i + 1);
-    const priority = (mcMatch ? mcMatch[2] : tagPriority ?? "medium") as TaskPriority;
-    const assignee = (mcMatch ? mcMatch[3] : tagAssignee ?? "raul") as TaskAssignee;
-    const project = mcMatch ? mcMatch[4] : projectName;
+    // ID derived from title (stable, no metadata needed in file)
+    const id = Buffer.from(rawTitle).toString("base64url").slice(0, 12);
+    const priority = (tagPriority ?? "medium") as TaskPriority;
+    const assignee = (tagAssignee ?? "raul") as TaskAssignee;
+    const project = projectName;
 
     tasks.push({
       id,

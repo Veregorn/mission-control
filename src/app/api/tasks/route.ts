@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import crypto from "crypto";
 import { PATHS } from "@/lib/config";
 import { parseTasksFromMarkdown } from "@/lib/parsers";
 import { Task, TaskPriority, TaskAssignee } from "@/lib/types";
@@ -53,11 +52,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "title is required" }, { status: 400 });
     }
 
-    const id = crypto.randomUUID().slice(0, 8);
     const resolvedPriority = priority ?? "medium";
     const resolvedAssignee = assignee ?? "raul";
-    const projectPart = project ? ` project=${project}` : "";
-    const line = `- [ ] ${title} #${resolvedPriority} #${resolvedAssignee} %% mc:id=${id} priority=${resolvedPriority} assignee=${resolvedAssignee}${projectPart} %%`;
+    const line = `- [ ] ${title.trim()} #${resolvedPriority} #${resolvedAssignee}`;
+    // ID derived from title (stable as long as title doesn't change)
+    const id = Buffer.from(title.trim()).toString("base64url").slice(0, 12);
 
     const current = fs.readFileSync(MC_TASKS_PATH, "utf-8");
 
@@ -84,7 +83,8 @@ export async function POST(request: Request) {
 
     fs.writeFileSync(MC_TASKS_PATH, updated, "utf-8");
 
-    const lineNumber = updated.split("\n").findIndex((l) => l.includes(`mc:id=${id}`)) + 1;
+    const escapedTitle = title.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const lineNumber = updated.split("\n").findIndex((l) => new RegExp(`- \\[[ /x]\\]\\s+${escapedTitle}`).test(l)) + 1;
 
     const task: Task = {
       id,

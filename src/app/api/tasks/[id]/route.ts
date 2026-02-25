@@ -12,10 +12,18 @@ function statusToCheckbox(status: TaskStatus): string {
 }
 
 function findLineIndex(lines: string[], id: string): number {
-  // Support both Obsidian comments (%% ... %%) and legacy HTML comments
-  return lines.findIndex(
-    (l) => l.includes(`%% mc:id=${id}`) || l.includes(`<!-- mc:id=${id}`)
-  );
+  // ID is base64url of the task title — decode to find the line
+  try {
+    const title = Buffer.from(id, "base64url").toString("utf-8");
+    return lines.findIndex(
+      (l) => /^- \[[ /x]\]/i.test(l) && l.includes(title)
+    );
+  } catch {
+    // Legacy fallback: search by mc:id comment
+    return lines.findIndex(
+      (l) => l.includes(`mc:id=${id}`) 
+    );
+  }
 }
 
 export async function PATCH(
