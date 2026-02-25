@@ -43,8 +43,8 @@ export function parseTasksFromMarkdown(filepath: string, projectName: string): T
     const tagPriority = line.match(/#(high|medium|low)\b/)?.[1] as TaskPriority | undefined;
     const tagAssignee = line.match(/#(raul|serman)\b/)?.[1] as TaskAssignee | undefined;
 
-    // ID derived from title (stable, no metadata needed in file)
-    const id = Buffer.from(rawTitle).toString("base64url").slice(0, 12);
+    // ID derived from title — full base64url, no truncation (needed to decode back exactly)
+    const id = Buffer.from(rawTitle).toString("base64url");
     const priority = (tagPriority ?? "medium") as TaskPriority;
     const assignee = (tagAssignee ?? "raul") as TaskAssignee;
     const project = projectName;

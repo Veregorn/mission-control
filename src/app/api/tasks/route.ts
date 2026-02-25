@@ -55,8 +55,8 @@ export async function POST(request: Request) {
     const resolvedPriority = priority ?? "medium";
     const resolvedAssignee = assignee ?? "raul";
     const line = `- [ ] ${title.trim()} #${resolvedPriority} #${resolvedAssignee}`;
-    // ID derived from title (stable as long as title doesn't change)
-    const id = Buffer.from(title.trim()).toString("base64url").slice(0, 12);
+    // ID derived from title — full base64url (sin truncar, para poder decodificar exactamente)
+    const id = Buffer.from(title.trim()).toString("base64url");
 
     const current = fs.readFileSync(MC_TASKS_PATH, "utf-8");
 

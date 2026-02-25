@@ -11,18 +11,25 @@ function statusToCheckbox(status: TaskStatus): string {
   return "[x]";
 }
 
+function extractTitle(line: string): string {
+  return line
+    .replace(/^- \[[ /x]\]\s*/i, "")
+    .replace(/%%.*?%%/g, "")
+    .replace(/<!--.*?-->/g, "")
+    .replace(/#\w+[-\w]*/g, "")
+    .trim();
+}
+
 function findLineIndex(lines: string[], id: string): number {
-  // ID is base64url of the task title — decode to find the line
+  // ID is full base64url of the task title — decode and match exactly
   try {
     const title = Buffer.from(id, "base64url").toString("utf-8");
     return lines.findIndex(
-      (l) => /^- \[[ /x]\]/i.test(l) && l.includes(title)
+      (l) => /^- \[[ /x]\]/i.test(l) && extractTitle(l) === title
     );
   } catch {
     // Legacy fallback: search by mc:id comment
-    return lines.findIndex(
-      (l) => l.includes(`mc:id=${id}`) 
-    );
+    return lines.findIndex((l) => l.includes(`mc:id=${id}`));
   }
 }
 
