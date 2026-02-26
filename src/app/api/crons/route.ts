@@ -1,11 +1,28 @@
 import { NextResponse } from "next/server";
-import { execSync } from "child_process";
+import fs from "fs";
+import os from "os";
+import path from "path";
 
-function formatScheduleLabel(schedule: {
-  kind: string;
-  everyMs?: number;
-  expression?: string;
-}): string {
+// Real shape of OpenClaw cron jobs.json entries
+interface RawCronJob {
+  id: string;
+  name: string;
+  enabled: boolean;
+  schedule: {
+    kind: string;
+    expr?: string;        // cron expression (e.g. "0 3 * * *")
+    everyMs?: number;     // interval in ms
+  };
+  sessionTarget?: string;
+  state?: {
+    nextRunAtMs?: number;
+    lastRunAtMs?: number;
+    lastStatus?: string;  // "ok" | "error" | "running" | ...
+    consecutiveErrors?: number;
+  };
+}
+
+function formatScheduleLabel(schedule: RawCronJob["schedule"]): string {
   if (schedule.kind === "interval" && schedule.everyMs != null) {
     const ms = schedule.everyMs;
     const minutes = ms / 60000;
@@ -18,9 +35,9 @@ function formatScheduleLabel(schedule: {
     return `${ms}ms`;
   }
 
-  if (schedule.kind === "cron" && schedule.expression) {
-    const expr = schedule.expression;
-    // Simple readable mappings for common cron expressions
+  if (schedule.kind === "cron" && schedule.expr) {
+    const expr = schedule.expr;
+    // Common cron expressions → human labels
     const cronMap: Record<string, string> = {
       "* * * * *": "cada minuto",
       "*/5 * * * *": "cada 5m",
@@ -30,9 +47,18 @@ function formatScheduleLabel(schedule: {
       "0 * * * *": "cada hora",
       "0 */2 * * *": "cada 2h",
       "0 */6 * * *": "cada 6h",
-      "0 0 * * *": "diario 00:00",
-      "0 9 * * *": "diario 09:00",
-      "0 9 * * 1": "lunes 09:00",
+      "0 0 * * *": "00:00 diario",
+      "0 1 * * *": "01:00 diario",
+      "0 2 * * *": "02:00 diario",
+      "0 3 * * *": "03:00 diario",
+      "0 4 * * *": "04:00 diario",
+      "0 5 * * *": "05:00 diario",
+      "45 6 * * *": "06:45 diario",
+      "0 8 * * *": "08:00 diario",
+      "0 9 * * *": "09:00 diario",
+      "0 10 * * 0": "dom 10:00",
+      "0 17 * * 5": "vie 17:00",
+      "0 19 * * *": "19:00 diario",
     };
     return cronMap[expr] ?? expr;
   }
@@ -42,36 +68,28 @@ function formatScheduleLabel(schedule: {
 
 export async function GET() {
   try {
-    const output = execSync("npx openclaw cron list --json 2>/dev/null || echo '{\"jobs\":[]}'", {
-      encoding: "utf-8",
-      timeout: 10000,
-    });
+    // Read directly from OpenClaw cron store — avoids CLI parsing issues
+    const cronPath = path.join(os.homedir(), ".openclaw", "cron", "jobs.json");
+    const raw = fs.readFileSync(cronPath, "utf-8");
+    const parsed = JSON.parse(raw) as { version?: number; jobs?: RawCronJob[] };
 
-    let jobs: Array<{
-      id: string;
-      name: string;
-      description?: string;
-      enabled: boolean;
-      schedule: { kind: string; everyMs?: number; expression?: string };
-      sessionTarget?: string;
-      state?: { nextRunAtMs?: number; lastRunAtMs?: number; lastRunStatus?: string };
-    }> = [];
+    const jobs: RawCronJob[] = Array.isArray(parsed)
+      ? (parsed as RawCronJob[])
+      : (parsed.jobs ?? []);
 
-    try {
-      const parsed = JSON.parse(output);
-      jobs = Array.isArray(parsed) ? parsed : (parsed.jobs ?? []);
-    } catch {
-      jobs = [];
-    }
-
-    const crons = jobs.map((job) => ({
-      id: job.id,
-      name: job.name,
-      scheduleLabel: formatScheduleLabel(job.schedule),
-      lastRunMs: job.state?.lastRunAtMs ?? null,
-      nextRunMs: job.state?.nextRunAtMs ?? null,
-      status: job.state?.lastRunStatus ?? (job.enabled ? "pending" : "disabled"),
-    }));
+    const crons = jobs
+      .sort((a, b) => (a.state?.lastRunAtMs ?? 0) - (b.state?.lastRunAtMs ?? 0))
+      .map((job) => ({
+        id: job.id,
+        name: job.name,
+        enabled: job.enabled,
+        scheduleLabel: formatScheduleLabel(job.schedule),
+        lastRunMs: job.state?.lastRunAtMs ?? null,
+        nextRunMs: job.state?.nextRunAtMs ?? null,
+        // Use real field name: lastStatus, not lastRunStatus
+        status: job.state?.lastStatus ?? (job.enabled ? "pending" : "disabled"),
+        consecutiveErrors: job.state?.consecutiveErrors ?? 0,
+      }));
 
     return NextResponse.json({ crons });
   } catch (error) {

@@ -5,10 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 interface Cron {
   id: string;
   name: string;
+  enabled: boolean;
   scheduleLabel: string;
   lastRunMs: number | null;
   nextRunMs: number | null;
   status: string;
+  consecutiveErrors: number;
 }
 
 function relativeTime(ms: number | null): string {
@@ -103,7 +105,11 @@ export function CronPanel() {
         {crons.map((cron) => (
           <div
             key={cron.id}
-            className="bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-lg px-4 py-3 transition-colors"
+            className={`border rounded-lg px-4 py-3 transition-colors ${
+              !cron.enabled
+                ? "bg-gray-900/50 border-gray-800/50 opacity-60"
+                : "bg-gray-900 border-gray-800 hover:border-gray-700"
+            }`}
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
@@ -112,6 +118,11 @@ export function CronPanel() {
                   <span className="text-xs text-gray-500 bg-gray-800 rounded px-1.5 py-0.5 font-mono">
                     {cron.scheduleLabel}
                   </span>
+                  {!cron.enabled && (
+                    <span className="text-xs text-gray-600 bg-gray-800/50 rounded px-1.5 py-0.5">
+                      desactivado
+                    </span>
+                  )}
                 </div>
                 <div className="flex gap-4 mt-1.5 text-xs text-gray-500">
                   <span>
@@ -122,6 +133,11 @@ export function CronPanel() {
                     <span className="text-gray-600">Próximo: </span>
                     {relativeTime(cron.nextRunMs)}
                   </span>
+                  {cron.consecutiveErrors > 0 && (
+                    <span className="text-red-500">
+                      ⚠ {cron.consecutiveErrors} errores seguidos
+                    </span>
+                  )}
                 </div>
               </div>
               <StatusBadge status={cron.status} />
