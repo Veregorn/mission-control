@@ -8,6 +8,7 @@ import { StatusBar } from "@/components/StatusBar";
 import { ProjectsOverview } from "@/components/ProjectsOverview";
 import { GoalsPanel } from "@/components/GoalsPanel";
 import { UsagePanel } from "@/components/UsagePanel";
+import { OfficePanel } from "@/components/OfficePanel";
 import { Task } from "@/lib/types";
 
 interface MemoryEntry {
@@ -17,13 +18,14 @@ interface MemoryEntry {
   sizeBytes: number;
 }
 
-type Tab = "projects" | "tasks" | "goals" | "usage" | "crons" | "memory";
+type Tab = "projects" | "tasks" | "goals" | "usage" | "office" | "crons" | "memory";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "projects", label: "🗂️ Proyectos" },
   { id: "tasks",    label: "📋 Tasks" },
   { id: "goals",    label: "🎯 Objetivos" },
   { id: "usage",    label: "📊 Uso" },
+  { id: "office",   label: "🏢 Oficina" },
   { id: "crons",    label: "⏰ Crons" },
   { id: "memory",   label: "📚 Memory" },
 ];
@@ -88,6 +90,7 @@ export default function Home() {
         {activeTab === "tasks"    && <TaskBoard />}
         {activeTab === "goals"    && <GoalsPanel />}
         {activeTab === "usage"    && <UsagePanel />}
+        {activeTab === "office"   && <OfficePanel />}
         {activeTab === "crons"    && <CronPanel />}
         {activeTab === "memory"   && <MemoryLog memories={memories} />}
       </main>
