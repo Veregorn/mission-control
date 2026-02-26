@@ -61,6 +61,15 @@ export function TaskBoard() {
     assignee: "raul" as TaskAssignee,
     priority: "medium" as TaskPriority,
   });
+  const [availableProjects, setAvailableProjects] = useState<string[]>([]);
+
+  // Load available Obsidian projects for the create form
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((r) => r.json())
+      .then((d) => setAvailableProjects((d.projects ?? []).map((p: { name: string }) => p.name)))
+      .catch(() => {});
+  }, []);
 
   const projects = [...new Set(tasks.map((t) => t.project).filter(Boolean))];
 
@@ -174,13 +183,20 @@ export function TaskBoard() {
             onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
             className="bg-gray-800 text-sm text-gray-200 rounded px-3 py-2 border border-gray-700 col-span-full"
           />
-          <input
-            type="text"
-            placeholder="Proyecto (opcional)"
-            value={newTask.project}
-            onChange={(e) => setNewTask({ ...newTask, project: e.target.value })}
-            className="bg-gray-800 text-sm text-gray-200 rounded px-3 py-2 border border-gray-700"
-          />
+          <div className="relative">
+            <input
+              list="projects-list"
+              placeholder="Proyecto (opcional)"
+              value={newTask.project}
+              onChange={(e) => setNewTask({ ...newTask, project: e.target.value })}
+              className="bg-gray-800 text-sm text-gray-200 rounded px-3 py-2 border border-gray-700 w-full"
+            />
+            <datalist id="projects-list">
+              {availableProjects.map((p) => (
+                <option key={p} value={p} />
+              ))}
+            </datalist>
+          </div>
           <div className="flex gap-2">
             <select
               value={newTask.assignee}

@@ -5,6 +5,9 @@ import { TaskBoard } from "@/components/TaskBoard";
 import { CronPanel } from "@/components/CronPanel";
 import { MemoryLog } from "@/components/MemoryLog";
 import { StatusBar } from "@/components/StatusBar";
+import { ProjectsOverview } from "@/components/ProjectsOverview";
+import { GoalsPanel } from "@/components/GoalsPanel";
+import { UsagePanel } from "@/components/UsagePanel";
 import { Task } from "@/lib/types";
 
 interface MemoryEntry {
@@ -14,18 +17,21 @@ interface MemoryEntry {
   sizeBytes: number;
 }
 
-type Tab = "tasks" | "crons" | "memory";
+type Tab = "projects" | "tasks" | "goals" | "usage" | "crons" | "memory";
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "tasks", label: "📋 Tasks" },
-  { id: "crons", label: "⏰ Crons" },
-  { id: "memory", label: "📚 Memory" },
+  { id: "projects", label: "🗂️ Proyectos" },
+  { id: "tasks",    label: "📋 Tasks" },
+  { id: "goals",    label: "🎯 Objetivos" },
+  { id: "usage",    label: "📊 Uso" },
+  { id: "crons",    label: "⏰ Crons" },
+  { id: "memory",   label: "📚 Memory" },
 ];
 
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
-  const [activeTab, setActiveTab] = useState<Tab>("tasks");
+  const [activeTab, setActiveTab] = useState<Tab>("projects");
 
   useEffect(() => {
     fetch("/api/tasks")
@@ -60,12 +66,12 @@ export default function Home() {
       </header>
 
       <div className="max-w-7xl mx-auto px-6">
-        <div className="flex gap-1 border-b border-gray-800 mt-4">
+        <div className="flex gap-1 border-b border-gray-800 mt-4 overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
                 activeTab === tab.id
                   ? "border-blue-500 text-white"
                   : "border-transparent text-gray-500 hover:text-gray-300"
@@ -78,9 +84,12 @@ export default function Home() {
       </div>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {activeTab === "tasks" && <TaskBoard />}
-        {activeTab === "crons" && <CronPanel />}
-        {activeTab === "memory" && <MemoryLog memories={memories} />}
+        {activeTab === "projects" && <ProjectsOverview />}
+        {activeTab === "tasks"    && <TaskBoard />}
+        {activeTab === "goals"    && <GoalsPanel />}
+        {activeTab === "usage"    && <UsagePanel />}
+        {activeTab === "crons"    && <CronPanel />}
+        {activeTab === "memory"   && <MemoryLog memories={memories} />}
       </main>
     </div>
   );

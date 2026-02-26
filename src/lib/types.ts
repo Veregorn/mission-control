@@ -11,5 +11,22 @@ export interface Task {
   project?: string;
   filePath: string;
   lineNumber: number;
-  editable: boolean; // true only for tasks in Mission Control Tasks.md
+  editable: boolean;
+}
+
+export type GoalTimeframe = "short" | "medium" | "long";
+export type GoalStatus = "active" | "completed" | "paused";
+
+export interface Goal {
+  id: string;
+  title: string;
+  timeframe: GoalTimeframe;
+  description: string;
+  projects: string[]; // linked Obsidian project names
+  status: GoalStatus;
+  createdAt: string;
+}
+
+export interface GoalsFile {
+  goals: Goal[];
 }
