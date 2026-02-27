@@ -22,8 +22,7 @@ export async function GET() {
       const filePath = path.join(PATHS.obsidianProjects, file);
       const content = fs.readFileSync(filePath, "utf-8");
 
-      // Same filters as task GET: must have serman, not completado/pausado
-      if (!content.includes("serman")) continue;
+      // Show all active projects — exclude completed/paused only
       if (content.includes("#completado") || content.includes("#pausado")) continue;
 
       projects.push({

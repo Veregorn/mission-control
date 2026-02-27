@@ -23,8 +23,7 @@ function resolveProjectFile(projectName: string): string | null {
       const filePath = path.join(PATHS.obsidianProjects, file);
       const content = fs.readFileSync(filePath, "utf-8");
 
-      // Same active-project filters as GET /api/tasks
-      if (!content.includes("serman")) continue;
+      // Active project filter — exclude completed/paused only
       if (content.includes("#completado") || content.includes("#pausado")) continue;
 
       const name = file.replace(".md", "").toLowerCase();
@@ -82,7 +81,6 @@ export async function GET() {
     for (const file of files) {
       const filepath = path.join(projectsDir, file);
       const content = fs.readFileSync(filepath, "utf-8");
-      if (!content.includes("serman")) continue;
       if (content.includes("#completado") || content.includes("#pausado")) continue;
 
       const projectName = file.replace(".md", "");
