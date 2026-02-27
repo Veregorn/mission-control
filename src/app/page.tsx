@@ -68,7 +68,7 @@ export default function Home() {
       </header>
 
       <div className="max-w-7xl mx-auto px-6">
-        <div className="flex gap-1 border-b border-gray-800 mt-4 overflow-x-auto">
+        <div className="flex gap-1 border-b border-gray-800 mt-4 overflow-x-auto overflow-y-hidden">
           {TABS.map((tab) => (
             <button
               key={tab.id}
