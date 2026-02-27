@@ -435,8 +435,8 @@ function DoneCollapsible({
 
 // ─── TaskCard ─────────────────────────────────────────────────────────────────
 
-const nextStatus: Record<TaskStatus, TaskStatus> = {
-  todo: "in_progress", in_progress: "done", done: "todo",
+const STATUS_ICONS: Record<TaskStatus, string> = {
+  todo: "⏳", in_progress: "🔵", done: "✅",
 };
 
 function TaskCard({
@@ -449,6 +449,8 @@ function TaskCard({
   showStatus?: boolean;
   hidePriority?: boolean;
 }) {
+  const statuses: TaskStatus[] = ["todo", "in_progress", "done"];
+
   return (
     <div className="bg-gray-800/50 rounded px-3 py-2 text-sm group relative cursor-default">
       <div className="flex items-start justify-between gap-1">
@@ -469,9 +471,24 @@ function TaskCard({
             <span className="text-gray-600">{task.assignee === "raul" ? "👤 Raúl" : "🛠️ Serman"}</span>
           </div>
         </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onStatusChange(task.id, nextStatus[task.status])}
-            className="text-xs text-blue-400 hover:text-blue-300 px-1" title="Avanzar estado">→</button>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Status picker: 3 buttons, active one highlighted */}
+          <div className="flex gap-0.5 border border-gray-700 rounded p-0.5">
+            {statuses.map((s) => (
+              <button
+                key={s}
+                onClick={() => task.status !== s && onStatusChange(task.id, s)}
+                className={`text-xs px-1 py-0.5 rounded transition-colors ${
+                  task.status === s
+                    ? "bg-gray-600 text-white cursor-default"
+                    : "text-gray-500 hover:text-white hover:bg-gray-700"
+                }`}
+                title={STATUS_LABELS[s]}
+              >
+                {STATUS_ICONS[s]}
+              </button>
+            ))}
+          </div>
           {task.editable && (
             <button onClick={() => onDelete(task.id)}
               className="text-xs text-red-400 hover:text-red-300 px-1" title="Eliminar">✕</button>
